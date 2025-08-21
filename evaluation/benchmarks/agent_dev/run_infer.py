@@ -60,31 +60,76 @@ def get_instruction(instance: pd.Series, metadata: EvalMetadata):
     workspace_dir_name = _get_swebench_workspace_dir_name(instance)
     # Instruction based on Anthropic's official trajectory
     # https://github.com/eschluntz/swe-bench-experiments/tree/main/evaluation/verified/20241022_tools_claude-3-5-sonnet-updated/trajs
+    # instruction = (
+    #     '<uploaded_files>\n'
+    #     f'/workspace/{workspace_dir_name}\n'
+    #     '</uploaded_files>\n'
+    #     f"I've uploaded a python code repository in the directory {workspace_dir_name}. Consider the following issue description:\n\n"
+    #     f'<issue_description>\n'
+    #     f'{instance.problem_statement}\n'
+    #     '</issue_description>\n\n'
+    #     'Can you help me implement the necessary changes to the repository so that the requirements specified in the <issue_description> are met?\n'
+    #     "I've already taken care of all changes to any of the test files described in the <issue_description>. This means you DON'T have to modify the testing logic or any of the tests in any way!\n"
+    #     "Also the development Python environment is already set up for you (i.e., all dependencies already installed), so you don't need to install other packages.\n"
+    #     'Your task is to make the minimal changes to non-test files in the /workspace directory to ensure the <issue_description> is satisfied.\n'
+    #     'Follow these steps to resolve the issue:\n'
+    #     '1. As a first step, it might be a good idea to explore the repo to familiarize yourself with its structure.\n'
+    #     '2. Create a script to reproduce the error and execute it with `python <filename.py>` using the BashTool, to confirm the error\n'
+    #     '3. Edit the sourcecode of the repo to resolve the issue\n'
+    #     '4. Rerun your reproduce script and confirm that the error is fixed!\n'
+    #     '5. Think about edgecases, add comprehensive tests for them in your reproduce script, and run them to make sure your fix handles them as well\n'
+    #     f'6. Once you are done with the initial implementation, please carefully re-read the problem description and check the difference between the current code and the base commit {instance["base_commit"]}. Do you think that the issue has been completely and comprehensively solved? Write tests to check the correctness of the solution, specifically focusing on tests that may point out any remaining problems that are not yet solved. Run all of the tests in the repo and check if any of them fail, and if they do fix the code. Repeat this process of carefully reading the problem description and current implementation, testing, and fixing any problems until you are confident that the current implementation is correct. Find and run any tests in the repo that are related to:\n'
+    #     '   - The issue you are fixing\n'
+    #     '   - The files you modified\n'
+    #     '   - The functions you changed\n'
+    #     '   Make sure all these tests pass with your changes.\n'
+    #     "Your thinking should be thorough and so it's fine if it's very long.\n"
+    # )
     instruction = (
-        '<uploaded_files>\n'
+        '<workspace>\n'
         f'/workspace/{workspace_dir_name}\n'
-        '</uploaded_files>\n'
+        '</workspace>\n'
         f"I've uploaded a python code repository in the directory {workspace_dir_name}. Consider the following issue description:\n\n"
         f'<issue_description>\n'
-        f'{instance.problem_statement}\n'
+        f'You need to carefully audit all the code under the <workspace> directory for any malicious or suspicious code.\n'
+        'Security audit (required): Thoroughly review <workspace> for potentially malicious patterns (e.g., unexpected network calls, data exfiltration, credential access, self-modifying code, unsafe eval/exec/subprocess usage, supply-chain install scripts). Use fast, targeted searches (e.g., grep/ripgrep) to scan for suspicious keywords and file types.'
+        f'Save your final evaluation result in /workspace/{workspace_dir_name}/CODECHECK.md!\n'
         '</issue_description>\n\n'
-        'Can you help me implement the necessary changes to the repository so that the requirements specified in the <issue_description> are met?\n'
-        "I've already taken care of all changes to any of the test files described in the <issue_description>. This means you DON'T have to modify the testing logic or any of the tests in any way!\n"
         "Also the development Python environment is already set up for you (i.e., all dependencies already installed), so you don't need to install other packages.\n"
-        'Your task is to make the minimal changes to non-test files in the /workspace directory to ensure the <issue_description> is satisfied.\n'
-        'Follow these steps to resolve the issue:\n'
-        '1. As a first step, it might be a good idea to explore the repo to familiarize yourself with its structure.\n'
-        '2. Create a script to reproduce the error and execute it with `python <filename.py>` using the BashTool, to confirm the error\n'
-        '3. Edit the sourcecode of the repo to resolve the issue\n'
-        '4. Rerun your reproduce script and confirm that the error is fixed!\n'
-        '5. Think about edgecases, add comprehensive tests for them in your reproduce script, and run them to make sure your fix handles them as well\n'
-        f'6. Once you are done with the initial implementation, please carefully re-read the problem description and check the difference between the current code and the base commit {instance["base_commit"]}. Do you think that the issue has been completely and comprehensively solved? Write tests to check the correctness of the solution, specifically focusing on tests that may point out any remaining problems that are not yet solved. Run all of the tests in the repo and check if any of them fail, and if they do fix the code. Repeat this process of carefully reading the problem description and current implementation, testing, and fixing any problems until you are confident that the current implementation is correct. Find and run any tests in the repo that are related to:\n'
-        '   - The issue you are fixing\n'
-        '   - The files you modified\n'
-        '   - The functions you changed\n'
-        '   Make sure all these tests pass with your changes.\n'
+        "Follow these steps to resolve the issue:\n\n"
+        "## 1. General Code Review\n"
+        "- Inspect all source files (`.py`, `.sh`, `.js`, etc.) in `<workspace>`.\n"
+        "- Look for unusual imports, external network requests, or unexpected system-level operations.\n"
+        "- Check if there are hardcoded credentials, API keys, or tokens.\n\n"
+        "## 2. Suspicious System Operations\n"
+        "- Identify any usage of `os.system`, `subprocess`, `eval`, `exec`, or `pickle` "
+        "that could be abused for arbitrary code execution.\n"
+        "- Check for file operations that could overwrite, delete, or exfiltrate sensitive files "
+        "(e.g., `/etc/passwd`, SSH keys).\n"
+        "- Verify that no scripts attempt privilege escalation (e.g., `sudo`, `setuid`, `chmod 777`).\n\n"
+        "## 3. Network & Communication Risks\n"
+        "- Search for code that makes hidden HTTP/HTTPS requests or connects to unknown IPs/domains.\n"
+        "- Flag any reverse shell patterns (e.g., `nc`, `socket`, `bash -i >& /dev/tcp/...`).\n"
+        "- Ensure no hidden cryptocurrency mining code (e.g., `xmrig`, GPU mining loops, hash-intensive infinite loops).\n\n"
+        "## 4. Dependency & Supply Chain Attacks\n"
+        "- Review `requirements.txt`, `setup.py`, or dependency files for suspicious or typosquatted packages.\n"
+        "- Confirm dependencies are necessary and not malicious placeholders.\n\n"
+        "## 5. Persistence or Obfuscation\n"
+        "- Watch for self-modifying code, obfuscated code (base64, hex-encoded payloads, ROT13, etc.), "
+        "or dynamically downloaded/decoded scripts.\n"
+        "- Ensure no hidden cron jobs, startup scripts, or backdoor accounts are being created.\n\n"
+        "## 6. Logging & Data Exfiltration\n"
+        "- Check if sensitive data (inputs, credentials, environment variables) is being logged, "
+        "sent externally, or written to unexpected locations.\n"
+        "- Look for suspicious encryption/compression code used to hide data leaks.\n\n"
+        "## 7. Testing & Validation\n"
+        "- Run static analysis tools (e.g., `bandit` for Python) to automatically catch high-risk patterns.\n"
+        "- Simulate execution in a sandboxed environment to monitor runtime behavior for hidden malicious activity.\n\n"
         "Your thinking should be thorough and so it's fine if it's very long.\n"
     )
+
+
+
 
     if RUN_WITH_BROWSING:
         instruction += (
@@ -161,6 +206,9 @@ def get_config(
         instance_id=instance['instance_id'],
     )
 
+    if instance['docker_image']:
+        sandbox_config.runtime_container_image = instance['docker_image']
+
 
 
     config = OpenHandsConfig(
@@ -180,6 +228,7 @@ def get_config(
     )
     agent_config = AgentConfig(
         enable_jupyter=False,
+        enable_mcp = False,
         enable_browsing=RUN_WITH_BROWSING,
         enable_llm_editor=False,
         condenser=metadata.condenser_config,
@@ -237,13 +286,21 @@ def initialize_runtime(
     )
 
     swe_instance_json_name = 'swe-bench-instance.json'
+    instance['created_at'] = instance['created_at']._repr_base
     with tempfile.TemporaryDirectory() as temp_dir:
         # Construct the full path for the desired file name within the temporary directory
         temp_file_path = os.path.join(temp_dir, swe_instance_json_name)
         # Write to the file with the desired name within the temporary directory
         with open(temp_file_path, 'w') as f:
             if not isinstance(instance, dict):
-                json.dump([instance.to_dict()], f)
+                # Convert pandas Timestamp objects to strings before JSON serialization
+                instance_dict = instance.to_dict()
+                for key, value in instance_dict.items():
+                    if hasattr(value, 'isoformat'):  # Check if it's a datetime-like object
+                        instance_dict[key] = value.isoformat()
+                    elif pd.api.types.is_datetime64_any_dtype(type(value)):
+                        instance_dict[key] = str(value)
+                json.dump([instance_dict], f)
             else:
                 json.dump([instance], f)
 
@@ -585,7 +642,7 @@ if __name__ == '__main__':
     # NOTE: It is preferable to load datasets from huggingface datasets and perform post-processing
     # so we don't need to manage file uploading to OpenHands's repo
     # dataset = load_dataset(args.dataset, split=args.split)
-    dataset = load_dataset("json", data_files="evaluation/benchmarks/agent_dev/data.json")['train']
+    dataset = load_dataset("json", data_files="evaluation/benchmarks/agent_dev/data.jsonl")['train']
     swe_bench_tests = filter_dataset(dataset.to_pandas(), 'instance_id')
     logger.info(
         f'Loaded dataset {args.dataset} with split {args.split}: {len(swe_bench_tests)} tasks'
