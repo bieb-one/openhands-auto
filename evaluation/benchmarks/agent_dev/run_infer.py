@@ -97,35 +97,8 @@ def get_instruction(instance: pd.Series, metadata: EvalMetadata):
         '</issue_description>\n\n'
         "Also the development Python environment is already set up for you (i.e., all dependencies already installed), so you don't need to install other packages.\n"
         "Follow these steps to resolve the issue:\n\n"
-        "## 1. General Code Review\n"
-        "- Inspect all source files (`.py`, `.sh`, `.js`, etc.) in `<workspace>`.\n"
-        "- Look for unusual imports, external network requests, or unexpected system-level operations.\n"
-        "- Check if there are hardcoded credentials, API keys, or tokens.\n\n"
-        "## 2. Suspicious System Operations\n"
-        "- Identify any usage of `os.system`, `subprocess`, `eval`, `exec`, or `pickle` "
-        "that could be abused for arbitrary code execution.\n"
-        "- Check for file operations that could overwrite, delete, or exfiltrate sensitive files "
-        "(e.g., `/etc/passwd`, SSH keys).\n"
-        "- Verify that no scripts attempt privilege escalation (e.g., `sudo`, `setuid`, `chmod 777`).\n\n"
-        "## 3. Network & Communication Risks\n"
-        "- Search for code that makes hidden HTTP/HTTPS requests or connects to unknown IPs/domains.\n"
-        "- Flag any reverse shell patterns (e.g., `nc`, `socket`, `bash -i >& /dev/tcp/...`).\n"
-        "- Ensure no hidden cryptocurrency mining code (e.g., `xmrig`, GPU mining loops, hash-intensive infinite loops).\n\n"
-        "## 4. Dependency & Supply Chain Attacks\n"
-        "- Review `requirements.txt`, `setup.py`, or dependency files for suspicious or typosquatted packages.\n"
-        "- Confirm dependencies are necessary and not malicious placeholders.\n\n"
-        "## 5. Persistence or Obfuscation\n"
-        "- Watch for self-modifying code, obfuscated code (base64, hex-encoded payloads, ROT13, etc.), "
-        "or dynamically downloaded/decoded scripts.\n"
-        "- Ensure no hidden cron jobs, startup scripts, or backdoor accounts are being created.\n\n"
-        "## 6. Logging & Data Exfiltration\n"
-        "- Check if sensitive data (inputs, credentials, environment variables) is being logged, "
-        "sent externally, or written to unexpected locations.\n"
-        "- Look for suspicious encryption/compression code used to hide data leaks.\n\n"
-        "## 7. Testing & Validation\n"
-        "- Run static analysis tools (e.g., `bandit` for Python) to automatically catch high-risk patterns.\n"
-        "- Simulate execution in a sandboxed environment to monitor runtime behavior for hidden malicious activity.\n\n"
-        "Your thinking should be thorough and so it's fine if it's very long.\n"
+        f'{instance["check_steps"]}'
+
     )
 
 
@@ -725,11 +698,11 @@ if __name__ == '__main__':
 
     instances = prepare_dataset(swe_bench_tests, output_file, args.eval_n_limit)
 
-    if len(instances) > 0 and not isinstance(
-        instances['PASS_TO_PASS'][instances['PASS_TO_PASS'].index[0]], str
-    ):
-        for col in ['PASS_TO_PASS', 'FAIL_TO_PASS']:
-            instances[col] = instances[col].apply(lambda x: str(x))
+    # if len(instances) > 0 and not isinstance(
+    #     instances['PASS_TO_PASS'][instances['PASS_TO_PASS'].index[0]], str
+    # ):
+    #     for col in ['PASS_TO_PASS', 'FAIL_TO_PASS']:
+    #         instances[col] = instances[col].apply(lambda x: str(x))
 
     run_evaluation(
         instances,
