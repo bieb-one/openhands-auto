@@ -92,8 +92,7 @@ def get_instruction(instance: pd.Series, metadata: EvalMetadata):
         '</workspace>\n'
         f"I've uploaded a python code repository in the directory {instance["workspace"]}. Consider the following issue description:\n\n"
         f'<issue_description>\n'
-        f'You need to carefully audit all the code under the <workspace> directory for any malicious or suspicious code.\n'
-        'Security audit (required): Thoroughly review <workspace> for potentially malicious patterns (e.g., unexpected network calls, data exfiltration, credential access, self-modifying code, unsafe eval/exec/subprocess usage, supply-chain install scripts). Use fast, targeted searches (e.g., grep/ripgrep) to scan for suspicious keywords and file types.'
+        f'{instance['problem_statement']}\n'
         f'Save your final evaluation result in {instance["workspace"]}/CODECHECK.md!\n'
         '</issue_description>\n\n'
         "Also the development Python environment is already set up for you (i.e., all dependencies already installed), so you don't need to install other packages.\n"
