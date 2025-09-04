@@ -1,0 +1,30 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Debug: run_infer.py via Poetry",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/evaluation/benchmarks/agent_dev/run_infer.py",
+      "console": "integratedTerminal",
+      "justMyCode": false,
+      "python": "/Users/bytedance/Library/Caches/pypoetry/virtualenvs/openhands-ai-frMrdRB2-py3.12/bin/python",
+      "args": [
+        "--agent-cls", "CodeActAgent",
+        "--llm-config", "llm.doubao",
+        "--max-iterations", "40",
+        "--eval-num-workers", "1",
+        "--eval-note", "agent_dev_test",
+        "--dataset", "luolin101/Visual-SWE-bench",
+        "--split", "test",
+        "--eval-n-limit", "1"
+      ],
+      "cwd": "${workspaceFolder}",
+      "env": {
+        "USE_INSTANCE_IMAGE": "true",
+        "RUN_WITH_BROWSING": "false",
+        "USE_HINT_TEXT": "false"
+      }
+    }
+  ]
+}
