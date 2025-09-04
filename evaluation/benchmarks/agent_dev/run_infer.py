@@ -470,7 +470,7 @@ def complete_runtime(
             )
 
     # add all files
-    action = CmdRunAction(command='git add -A')
+    action = CmdRunAction(command='git add /code/CODECHECK.md')
     action.set_hard_timeout(600)
     logger.info(action, extra={'msg_type': 'ACTION'})
     obs = runtime.run_action(action)
