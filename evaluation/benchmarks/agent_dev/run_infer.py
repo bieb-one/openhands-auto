@@ -380,6 +380,44 @@ def initialize_runtime(
     logger.info('END Runtime Initialization Fn')
     logger.info('-' * 30)
 
+def initialize_runtime_agentdet(
+    runtime: Runtime,
+    instance: pd.Series,  # this argument is not required
+):
+    """Initialize the runtime for the agent.
+
+    This function is called before the runtime is used to run the agent.
+    """
+    logger.info('-' * 30)
+    logger.info('BEGIN Runtime Initialization Fn')
+    logger.info('-' * 30)
+    workspace_dir_name = _get_swebench_workspace_dir_name(instance)
+    obs: CmdOutputObservation
+
+    # 查看是否存在检测代码
+    workspace_dir = instance.workspace
+    action = CmdRunAction(
+        command=f"""echo 'check code workspace={workspace_dir}'"""
+    )
+    action.set_hard_timeout(600)
+    logger.info(action, extra={'msg_type': 'ACTION'})
+    obs = runtime.run_action(action)
+    logger.info(obs, extra={'msg_type': 'OBSERVATION'})
+    assert_and_raise(
+        obs.exit_code == 0, f'Failed to export SWE_INSTANCE_ID: {str(obs)}'
+    )
+
+    action = CmdRunAction(command=f'cd {workspace_dir}')
+    action.set_hard_timeout(600)
+    logger.info(action, extra={'msg_type': 'ACTION'})
+    obs = runtime.run_action(action)
+    logger.info(obs, extra={'msg_type': 'OBSERVATION'})
+
+
+    logger.info('-' * 30)
+    logger.info('END Runtime Initialization Fn')
+    logger.info('-' * 30)
+
 
 def complete_runtime(
     runtime: Runtime,
@@ -397,7 +435,8 @@ def complete_runtime(
     obs: CmdOutputObservation
     workspace_dir_name = _get_swebench_workspace_dir_name(instance)
 
-    action = CmdRunAction(command=f'cd /workspace/{workspace_dir_name}')
+    workspace_dir = instance.workspace
+    action = CmdRunAction(command=f'cd {workspace_dir}')
     action.set_hard_timeout(600)
     logger.info(action, extra={'msg_type': 'ACTION'})
     obs = runtime.run_action(action)
@@ -412,7 +451,7 @@ def complete_runtime(
         logger.info(obs, extra={'msg_type': 'OBSERVATION'})
 
         # Then run the command again
-        action = CmdRunAction(command=f'cd /workspace/{workspace_dir_name}')
+        action = CmdRunAction(command=f'cd {workspace_dir}')
         action.set_hard_timeout(600)
         logger.info(action, extra={'msg_type': 'ACTION'})
         obs = runtime.run_action(action)
@@ -420,7 +459,7 @@ def complete_runtime(
 
     assert_and_raise(
         isinstance(obs, CmdOutputObservation) and obs.exit_code == 0,
-        f'Failed to cd to /workspace/{workspace_dir_name}: {str(obs)}',
+        f'Failed to cd to {workspace_dir}: {str(obs)}',
     )
 
     action = CmdRunAction(command='git config --global core.pager ""')
@@ -529,7 +568,7 @@ def process_instance(
     call_async_from_sync(runtime.connect)
 
     try:
-        initialize_runtime(runtime, instance)
+        initialize_runtime_agentdet(runtime, instance)
 
         instruction = get_instruction(instance, metadata)
 
