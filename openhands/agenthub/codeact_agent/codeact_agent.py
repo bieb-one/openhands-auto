@@ -19,6 +19,7 @@ from openhands.agenthub.codeact_agent.tools.str_replace_editor import (
     create_str_replace_editor_tool,
 )
 from openhands.agenthub.codeact_agent.tools.think import ThinkTool
+from openhands.agenthub.codeact_agent.tools.sum import SumTool
 from openhands.controller.agent import Agent
 from openhands.controller.state.state import State
 from openhands.core.config import AgentConfig
@@ -116,6 +117,7 @@ class CodeActAgent(Agent):
             tools.append(create_cmd_run_tool(use_short_description=use_short_tool_desc))
         if self.config.enable_think:
             tools.append(ThinkTool)
+        tools.append(SumTool)
         if self.config.enable_finish:
             tools.append(FinishTool)
         if self.config.enable_browsing:
@@ -180,19 +182,24 @@ class CodeActAgent(Agent):
             f'Processing {len(condensed_history)} events from a total of {len(state.history)} events'
         )
 
+        #初始化初始用户消息
         initial_user_message = self._get_initial_user_message(state.history)
+        # 处理上下文历史数据
         messages = self._get_messages(condensed_history, initial_user_message)
         params: dict = {
             'messages': self.llm.format_messages_for_llm(messages),
         }
         params['tools'] = check_tools(self.tools, self.llm.config)
         params['extra_body'] = {'metadata': state.to_llm_metadata(agent_name=self.name)}
+        # 调用LLM模型获取响应
         response = self.llm.completion(**params)
         logger.debug(f'Response from LLM: {response}')
+        #获取actiion
         actions = self.response_to_actions(response)
         logger.debug(f'Actions after response_to_actions: {actions}')
         for action in actions:
             self.pending_actions.append(action)
+        #运行action
         return self.pending_actions.popleft()
 
     def _get_initial_user_message(self, history: list[Event]) -> MessageAction:

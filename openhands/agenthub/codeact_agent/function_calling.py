@@ -15,6 +15,7 @@ from openhands.agenthub.codeact_agent.tools import (
     IPythonTool,
     LLMBasedFileEditTool,
     ThinkTool,
+    SumTool,
     create_cmd_run_tool,
     create_str_replace_editor_tool,
 )
@@ -212,6 +213,24 @@ def response_to_actions(
                         f'Missing required argument "code" in tool call {tool_call.function.name}'
                     )
                 action = BrowseInteractiveAction(browser_actions=arguments['code'])
+
+            # ================================================
+            # SumTool (compute a + b)
+            # ================================================
+            elif tool_call.function.name == SumTool['function']['name']:
+                if 'a' not in arguments or 'b' not in arguments:
+                    raise FunctionCallValidationError(
+                        f'Missing required arguments "a" and/or "b" in tool call {tool_call.function.name}'
+                    )
+                try:
+                    a_val = float(arguments['a'])
+                    b_val = float(arguments['b'])
+                except Exception as e:
+                    raise FunctionCallValidationError(
+                        f'Invalid numeric values for a/b: {arguments}'
+                    ) from e
+                result = a_val + b_val
+                action = MessageAction(content=str(result))
 
             # ================================================
             # MCPAction (MCP)
